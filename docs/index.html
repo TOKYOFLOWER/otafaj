@@ -188,9 +188,15 @@
     </div>
 
     <div class="card">
-      <div class="field">
-        <label for="selHinmoku">品目・品種</label>
-        <select id="selHinmoku" data-field="hinmoku"><option value="">選択してください</option></select>
+      <div class="row">
+        <div class="field">
+          <label for="selHinmoku">品目</label>
+          <select id="selHinmoku" data-field="hinmoku"><option value="">選択してください</option></select>
+        </div>
+        <div class="field">
+          <label for="selHinshu">品種</label>
+          <select id="selHinshu" data-field="hinshu"><option value="">すべて</option></select>
+        </div>
       </div>
       <div class="row">
         <div class="field">
@@ -302,9 +308,9 @@ function switchTab(name) {
 
 // ===== 仕入データ & カスケード選択 =====
 let DATA = [];                                   // 全行
-const sel = { source: '', hinmoku: '', sanchi: '', kikaku: '', tanka: '' };
-const FIELDS = ['hinmoku', 'sanchi', 'kikaku', 'tanka'];
-const SELECTS = { hinmoku: 'selHinmoku', sanchi: 'selSanchi', kikaku: 'selKikaku', tanka: 'selTanka' };
+const sel = { source: '', hinmoku: '', hinshu: '', sanchi: '', kikaku: '', tanka: '' };
+const FIELDS = ['hinmoku', 'hinshu', 'sanchi', 'kikaku', 'tanka'];
+const SELECTS = { hinmoku: 'selHinmoku', hinshu: 'selHinshu', sanchi: 'selSanchi', kikaku: 'selKikaku', tanka: 'selTanka' };
 
 async function loadData() {
   $('periodNote').textContent = '仕入データ読み込み中…';
@@ -344,7 +350,7 @@ function refresh() {
     });
     let values = [...counts.keys()];
     if (f === 'tanka') values.sort((a, b) => Number(a) - Number(b));
-    else if (f === 'hinmoku' || f === 'sanchi') values.sort((a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b, 'ja'));
+    else if (f === 'hinmoku' || f === 'hinshu' || f === 'sanchi') values.sort((a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b, 'ja'));
     else values.sort((a, b) => a.localeCompare(b, 'ja'));
 
     const el = $(SELECTS[f]);
@@ -404,7 +410,7 @@ function renderResults() {
     el.innerHTML = `
       <div class="result-head">
         <div class="top">
-          <span class="name"><span class="badge">${r.sourceLabel}</span>${esc(r.hinmoku)}</span>
+          <span class="name"><span class="badge">${r.sourceLabel}</span>${esc(r.hinmoku)}${r.hinshu ? ' <span style="font-weight:500">' + esc(r.hinshu) + '</span>' : ''}</span>
           <span class="tanka num">@${r.tanka}円</span>
         </div>
         <div class="meta num">${esc(r.kikaku)} / ${esc(r.sanchi)} ${esc(r.shukka)} / ${r.date} 仕入${r.suryo ? ' ' + r.suryo + '本' : ''}</div>
@@ -447,11 +453,11 @@ function renderResults() {
           date: el.querySelector('.f-date').value,
           source: r.source, sourceLabel: r.sourceLabel, tab: r.tab,
           sanchi: r.sanchi, shukka: r.shukka,
-          hinmoku: r.hinmoku, kikaku: r.kikaku,
+          hinmoku: r.hinmoku, hinshu: r.hinshu, kikaku: r.kikaku,
           tanka: r.tanka, honsu: honsu,
           memo: el.querySelector('.f-memo').value
         });
-        toast(r.hinmoku + ' ' + honsu + '本 / ' + yen(json.kingaku) + ' を記録しました');
+        toast(r.hinmoku + (r.hinshu ? ' ' + r.hinshu : '') + ' ' + honsu + '本 / ' + yen(json.kingaku) + ' を記録しました');
         el.classList.remove('open');
         honsuInput.value = '';
         kingakuEl.textContent = '¥0';
