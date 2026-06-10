@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>花ロス管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #FAF8F3;
+    --card: #FFFFFF;
+    --ink: #26312A;
+    --sub: #6E7A6F;
+    --green: #2E5E45;
+    --green-soft: #E6EEE8;
+    --loss: #B5482E;
+    --line: #DFD9CC;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.6;
+    padding-bottom: 80px;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+
+  header {
+    background: var(--green);
+    color: #fff;
+    padding: 14px 16px 10px;
+  }
+  header h1 { font-size: 17px; font-weight: 700; letter-spacing: .08em; }
+  header .sub { font-size: 11px; opacity: .75; letter-spacing: .05em; }
+
+  nav { display: flex; background: var(--green); padding: 0 16px; }
+  nav button {
+    flex: 1; background: none; border: none;
+    color: rgba(255,255,255,.65); font: inherit; font-weight: 500;
+    padding: 8px 0 11px; border-bottom: 3px solid transparent; cursor: pointer;
+  }
+  nav button.active { color: #fff; border-bottom-color: #fff; font-weight: 700; }
+
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  label { display: block; font-size: 12px; color: var(--sub); margin-bottom: 4px; letter-spacing: .04em; }
+  select, input, textarea {
+    width: 100%; font: inherit;
+    padding: 11px 12px;
+    border: 1px solid var(--line); border-radius: 8px;
+    background: #fff; color: var(--ink);
+    appearance: auto;
+  }
+  select:focus, input:focus { outline: 2px solid var(--green); outline-offset: 1px; border-color: var(--green); }
+  select:disabled { background: #F1EFE8; color: var(--sub); }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+  .field { margin-bottom: 12px; }
+
+  .btn {
+    display: block; width: 100%;
+    font: inherit; font-weight: 700; letter-spacing: .1em;
+    padding: 12px; border: none; border-radius: 8px;
+    background: var(--green); color: #fff; cursor: pointer;
+  }
+  .btn:disabled { opacity: .5; }
+  .btn.loss { background: var(--loss); }
+  .btn.ghost { background: none; color: var(--green); border: 1px solid var(--green); font-weight: 500; padding: 8px; }
+
+  .status { font-size: 13px; color: var(--sub); margin: 8px 2px; }
+  .status.err { color: var(--loss); }
+  .period { font-size: 12px; color: var(--sub); margin: -6px 2px 12px; }
+
+  .chips { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .chip {
+    font: inherit; font-size: 13px;
+    padding: 6px 14px; border-radius: 99px;
+    border: 1px solid var(--line); background: #fff; color: var(--sub); cursor: pointer;
+  }
+  .chip.active { background: var(--green); border-color: var(--green); color: #fff; font-weight: 700; }
+
+  /* 候補件数バッジ */
+  .countnote { font-size: 12px; color: var(--sub); text-align: right; margin: -6px 0 8px; }
+
+  /* 結果カード */
+  .result {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .result-head { padding: 12px 14px; cursor: pointer; }
+  .result-head .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .result-head .name { font-weight: 700; }
+  .result-head .tanka { color: var(--green); font-weight: 700; white-space: nowrap; }
+  .result-head .meta { font-size: 12px; color: var(--sub); margin-top: 2px; }
+  .badge {
+    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+    padding: 1px 7px; border-radius: 99px;
+    background: var(--green-soft); color: var(--green);
+    margin-right: 6px; vertical-align: 1px;
+  }
+  .result-form {
+    display: none;
+    border-top: 1px dashed var(--line);
+    background: #FBFAF6;
+    padding: 14px;
+  }
+  .result.open .result-form { display: block; }
+  .result-form .calc { text-align: right; font-size: 13px; color: var(--sub); margin-bottom: 10px; }
+  .result-form .calc strong { color: var(--loss); font-size: 17px; }
+
+  /* 集計: 荷札風 */
+  .tagcard {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 4px 18px 4px 4px;
+    padding: 18px 18px 16px 44px;
+    margin-bottom: 16px;
+    box-shadow: 1px 2px 0 var(--line);
+  }
+  .tagcard::before {
+    content: '';
+    position: absolute; left: 16px; top: 50%;
+    width: 12px; height: 12px; margin-top: -6px;
+    border: 2px solid var(--line); border-radius: 50%;
+    background: var(--paper);
+  }
+  .tagcard .label { font-size: 11px; letter-spacing: .2em; color: var(--sub); }
+  .tagcard .amount { font-size: 32px; font-weight: 700; color: var(--loss); line-height: 1.2; }
+  .tagcard .detail { font-size: 13px; color: var(--sub); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  th { font-size: 11px; color: var(--sub); font-weight: 500; letter-spacing: .05em; }
+  td.r, th.r { text-align: right; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 24px;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: #fff;
+    font-size: 14px; padding: 10px 20px; border-radius: 99px;
+    opacity: 0; transition: opacity .25s, transform .25s;
+    pointer-events: none; max-width: 90vw;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>花ロス管理</h1>
+  <div class="sub">FAJ・大田花き 仕入連動</div>
+</header>
+
+<nav>
+  <button id="tabRecord" class="active">記録</button>
+  <button id="tabSummary">集計</button>
+</nav>
+
+<main>
+
+  <!-- ===== 記録 ===== -->
+  <section id="panelRecord" class="panel active">
+    <p class="period" id="periodNote">仕入データ読み込み中…</p>
+
+    <div class="chips" id="sourceChips">
+      <button class="chip active" data-source="">両市場</button>
+      <button class="chip" data-source="FAJ">FAJ</button>
+      <button class="chip" data-source="OTA">大田花き</button>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label for="selHinmoku">品目・品種</label>
+        <select id="selHinmoku" data-field="hinmoku"><option value="">選択してください</option></select>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="selSanchi">産地</label>
+          <select id="selSanchi" data-field="sanchi"><option value="">すべて</option></select>
+        </div>
+        <div class="field">
+          <label for="selKikaku">規格・等階級</label>
+          <select id="selKikaku" data-field="kikaku"><option value="">すべて</option></select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="selTanka">単価</label>
+        <select id="selTanka" data-field="tanka"><option value="">すべて</option></select>
+      </div>
+      <button class="btn ghost" id="resetBtn">選択をリセット</button>
+    </div>
+
+    <p class="countnote" id="matchNote"></p>
+    <div id="results"></div>
+  </section>
+
+  <!-- ===== 集計 ===== -->
+  <section id="panelSummary" class="panel">
+    <div class="chips" id="periodChips">
+      <button class="chip active" data-period="thisMonth">今月</button>
+      <button class="chip" data-period="lastMonth">先月</button>
+      <button class="chip" data-period="all">全期間</button>
+    </div>
+    <div class="card">
+      <div class="row">
+        <div class="field">
+          <label for="sumFrom">開始日</label>
+          <input id="sumFrom" type="date">
+        </div>
+        <div class="field">
+          <label for="sumTo">終了日</label>
+          <input id="sumTo" type="date">
+        </div>
+      </div>
+      <div class="field">
+        <label for="groupBy">内訳の単位</label>
+        <select id="groupBy">
+          <option value="hinmoku">品目別</option>
+          <option value="sanchi">産地別</option>
+          <option value="month">月別</option>
+        </select>
+      </div>
+      <button class="btn" id="summaryBtn">集計する</button>
+    </div>
+
+    <div id="summaryResult" style="display:none">
+      <div class="tagcard">
+        <div class="label">廃棄ロス合計</div>
+        <div class="amount num" id="totalKingaku">¥0</div>
+        <div class="detail num" id="totalDetail"></div>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th id="groupColName">品目</th><th class="r">本数</th><th class="r">金額</th></tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <p class="status" id="summaryStatus"></p>
+  </section>
+
+</main>
+
+<div id="toast" role="status"></div>
+
+<script src="config.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const yen = n => '¥' + Math.round(n).toLocaleString('ja-JP');
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const CFG = window.LOSS_CONFIG || {};
+
+async function api(params) {
+  if (!CFG.gasUrl || CFG.gasUrl.indexOf('http') !== 0) throw new Error('config.js に GAS の URL を設定してください');
+  const res = await fetch(CFG.gasUrl + '?' + new URLSearchParams(params));
+  if (!res.ok) throw new Error('通信エラー (' + res.status + ')');
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || '不明なエラー');
+  return json;
+}
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._tm);
+  toast._tm = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ===== タブ切替 =====
+$('tabRecord').onclick = () => switchTab('Record');
+$('tabSummary').onclick = () => switchTab('Summary');
+function switchTab(name) {
+  ['Record','Summary'].forEach(n => {
+    $('tab'+n).classList.toggle('active', n === name);
+    $('panel'+n).classList.toggle('active', n === name);
+  });
+}
+
+// ===== 仕入データ & カスケード選択 =====
+let DATA = [];                                   // 全行
+const sel = { source: '', hinmoku: '', sanchi: '', kikaku: '', tanka: '' };
+const FIELDS = ['hinmoku', 'sanchi', 'kikaku', 'tanka'];
+const SELECTS = { hinmoku: 'selHinmoku', sanchi: 'selSanchi', kikaku: 'selKikaku', tanka: 'selTanka' };
+
+async function loadData() {
+  $('periodNote').textContent = '仕入データ読み込み中…';
+  try {
+    const json = await api({ action: 'data', days: CFG.days || 15, source: 'both' });
+    DATA = json.rows;
+    $('periodNote').textContent =
+      `直近${CFG.days || 15}日(${json.from.slice(5).replace('-','/')}〜${json.to.slice(5).replace('-','/')})の仕入 ${json.count}件から検索`;
+    refresh();
+  } catch (e) {
+    $('periodNote').textContent = '読み込み失敗: ' + e.message;
+  }
+}
+
+// 指定フィールド以外の現在の選択で絞った行
+function filtered(exceptField) {
+  return DATA.filter(r => {
+    if (sel.source && r.source !== sel.source) return false;
+    for (const f of FIELDS) {
+      if (f === exceptField) continue;
+      if (sel[f] === '') continue;
+      if (String(f === 'tanka' ? r.tanka : r[f]) !== sel[f]) return false;
+    }
+    return true;
+  });
+}
+
+function refresh() {
+  // 各ドロップダウンの候補を「自分以外の選択」で絞って再構築
+  FIELDS.forEach(f => {
+    const rows = filtered(f);
+    const counts = new Map();
+    rows.forEach(r => {
+      const v = String(f === 'tanka' ? r.tanka : r[f]);
+      if (!v) return;
+      counts.set(v, (counts.get(v) || 0) + 1);
+    });
+    let values = [...counts.keys()];
+    if (f === 'tanka') values.sort((a, b) => Number(a) - Number(b));
+    else if (f === 'hinmoku' || f === 'sanchi') values.sort((a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b, 'ja'));
+    else values.sort((a, b) => a.localeCompare(b, 'ja'));
+
+    const el = $(SELECTS[f]);
+    const current = sel[f];
+    el.innerHTML = '';
+    const top = document.createElement('option');
+    top.value = '';
+    top.textContent = (f === 'hinmoku' ? '選択してください' : 'すべて') + ` (${values.length})`;
+    el.appendChild(top);
+    values.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = (f === 'tanka' ? '@' + Number(v) + '円' : v) + ' (' + counts.get(v) + ')';
+      el.appendChild(o);
+    });
+    el.value = values.includes(current) ? current : '';
+    if (el.value !== current) sel[f] = el.value;
+  });
+  renderResults();
+}
+
+FIELDS.forEach(f => {
+  $(SELECTS[f]).onchange = e => { sel[f] = e.target.value; refresh(); };
+});
+
+document.querySelectorAll('#sourceChips .chip').forEach(chip => {
+  chip.onclick = () => {
+    document.querySelectorAll('#sourceChips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    sel.source = chip.dataset.source;
+    refresh();
+  };
+});
+
+$('resetBtn').onclick = () => {
+  FIELDS.forEach(f => sel[f] = '');
+  refresh();
+};
+
+// ===== 該当行の表示と記録 =====
+function renderResults() {
+  const box = $('results');
+  box.innerHTML = '';
+  const note = $('matchNote');
+
+  if (!sel.hinmoku) {
+    note.textContent = DATA.length ? '品目を選ぶと仕入明細が表示されます' : '';
+    return;
+  }
+  const rows = filtered(null);
+  note.textContent = `該当 ${rows.length}件`;
+  const today = new Date().toLocaleDateString('sv-SE');
+
+  rows.slice(0, 50).forEach(r => {
+    const el = document.createElement('div');
+    el.className = 'result';
+    el.innerHTML = `
+      <div class="result-head">
+        <div class="top">
+          <span class="name"><span class="badge">${r.sourceLabel}</span>${esc(r.hinmoku)}</span>
+          <span class="tanka num">@${r.tanka}円</span>
+        </div>
+        <div class="meta num">${esc(r.kikaku)} / ${esc(r.sanchi)} ${esc(r.shukka)} / ${r.date} 仕入${r.suryo ? ' ' + r.suryo + '本' : ''}</div>
+      </div>
+      <div class="result-form">
+        <div class="row">
+          <div class="field">
+            <label>廃棄本数</label>
+            <input type="number" inputmode="numeric" min="1" class="f-honsu" placeholder="0">
+          </div>
+          <div class="field">
+            <label>廃棄日</label>
+            <input type="date" class="f-date" value="${today}">
+          </div>
+        </div>
+        <div class="field">
+          <label>メモ(任意)</label>
+          <input type="text" class="f-memo" placeholder="開花進みすぎ など">
+        </div>
+        <div class="calc">ロス金額 <strong class="f-kingaku num">¥0</strong></div>
+        <button class="btn loss f-record">この内容でロスを記録</button>
+      </div>`;
+
+    el.querySelector('.result-head').onclick = () => el.classList.toggle('open');
+
+    const honsuInput = el.querySelector('.f-honsu');
+    const kingakuEl = el.querySelector('.f-kingaku');
+    honsuInput.oninput = () => {
+      kingakuEl.textContent = yen((Number(honsuInput.value) || 0) * r.tanka);
+    };
+
+    el.querySelector('.f-record').onclick = async (ev) => {
+      const honsu = Number(honsuInput.value);
+      if (!honsu || honsu <= 0) { toast('廃棄本数を入力してください'); return; }
+      const btn = ev.target;
+      btn.disabled = true;
+      try {
+        const json = await api({
+          action: 'record',
+          date: el.querySelector('.f-date').value,
+          source: r.source, sourceLabel: r.sourceLabel, tab: r.tab,
+          sanchi: r.sanchi, shukka: r.shukka,
+          hinmoku: r.hinmoku, kikaku: r.kikaku,
+          tanka: r.tanka, honsu: honsu,
+          memo: el.querySelector('.f-memo').value
+        });
+        toast(r.hinmoku + ' ' + honsu + '本 / ' + yen(json.kingaku) + ' を記録しました');
+        el.classList.remove('open');
+        honsuInput.value = '';
+        kingakuEl.textContent = '¥0';
+      } catch (e) {
+        toast('記録失敗: ' + e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    box.appendChild(el);
+  });
+}
+
+// ===== 集計 =====
+document.querySelectorAll('#periodChips .chip').forEach(chip => {
+  chip.onclick = () => {
+    document.querySelectorAll('#periodChips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    const now = new Date();
+    const fmt = d => d.toLocaleDateString('sv-SE');
+    if (chip.dataset.period === 'thisMonth') {
+      $('sumFrom').value = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+      $('sumTo').value = fmt(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+    } else if (chip.dataset.period === 'lastMonth') {
+      $('sumFrom').value = fmt(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+      $('sumTo').value = fmt(new Date(now.getFullYear(), now.getMonth(), 0));
+    } else {
+      $('sumFrom').value = '';
+      $('sumTo').value = '';
+    }
+  };
+});
+
+$('summaryBtn').onclick = async () => {
+  const st = $('summaryStatus');
+  st.classList.remove('err');
+  st.textContent = '集計中…';
+  $('summaryBtn').disabled = true;
+  try {
+    const groupBy = $('groupBy').value;
+    const json = await api({
+      action: 'summary',
+      from: $('sumFrom').value,
+      to: $('sumTo').value,
+      groupBy: groupBy
+    });
+    st.textContent = '';
+    $('summaryResult').style.display = 'block';
+    $('totalKingaku').textContent = yen(json.total.kingaku);
+    $('totalDetail').textContent = json.total.honsu.toLocaleString() + '本 / ' + json.total.count + '件の記録';
+    $('groupColName').textContent = { hinmoku: '品目', sanchi: '産地', month: '月' }[groupBy];
+    const tb = $('summaryBody');
+    tb.innerHTML = '';
+    json.groups.forEach(g => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${esc(g.key)}</td><td class="r num">${g.honsu.toLocaleString()}</td><td class="r num">${yen(g.kingaku)}</td>`;
+      tb.appendChild(tr);
+    });
+  } catch (e) {
+    st.classList.add('err');
+    st.textContent = e.message;
+  } finally {
+    $('summaryBtn').disabled = false;
+  }
+};
+
+// ===== 初期化 =====
+document.querySelector('[data-period="thisMonth"]').click();
+loadData();
+</script>
+</body>
+</html>
