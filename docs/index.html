@@ -327,12 +327,15 @@ async function loadData() {
   }
 }
 
-// 指定フィールド以外の現在の選択で絞った行
+// 指定フィールド以外の現在の選択で絞った行（配列指定で複数除外可）
 function filtered(exceptField) {
+  const excl = exceptField == null ? []
+             : Array.isArray(exceptField) ? exceptField
+             : [exceptField];
   return DATA.filter(r => {
     if (sel.source && r.source !== sel.source) return false;
     for (const f of FIELDS) {
-      if (f === exceptField) continue;
+      if (excl.includes(f)) continue;
       if (sel[f] === '') continue;
       if (String(f === 'tanka' ? r.tanka : r[f]) !== sel[f]) return false;
     }
@@ -341,9 +344,11 @@ function filtered(exceptField) {
 }
 
 function refresh() {
-  // 各ドロップダウンの候補を「自分以外の選択」で絞って再構築
+  // 各ドロップダウンの候補を再構築
+  // hinmokuはカスケードの親: hinshuの選択に影響されない
+  // hinshuはカスケードの子: hinmokuの選択で絞られる
   FIELDS.forEach(f => {
-    const rows = filtered(f);
+    const rows = filtered(f === 'hinmoku' ? ['hinmoku', 'hinshu'] : f);
     const counts = new Map();
     rows.forEach(r => {
       const v = String(f === 'tanka' ? r.tanka : r[f]);
@@ -371,6 +376,12 @@ function refresh() {
     el.value = values.includes(current) ? current : '';
     if (el.value !== current) sel[f] = el.value;
   });
+
+  // 品種は品目未選択のとき無効化・リセット
+  const hinshuEl = $('selHinshu');
+  hinshuEl.disabled = !sel.hinmoku;
+  if (!sel.hinmoku) { sel.hinshu = ''; hinshuEl.value = ''; }
+
   renderResults();
 }
 
