@@ -88,30 +88,23 @@ function splitOtaName(name) {
   return { hinmoku: name, hinshu: '' };
 }
 
-// FAJ shohinName「品目・色“品種”」を分割
-// 例: バラ・赤“アマダ＋”→ 品目=バラ 品種=赤“アマダ＋”
-//     ファレノ　ソーゴ…“Ｖ３”→ 品目=ファレノ 品種=ソーゴ…“Ｖ３”
-//     ダリア“艶舞”→ 品目=ダリア 品種=艶舞 / カーネーション → 品目のみ
+// FAJ shohinName「品目・色“品種名”」を分割
+// 例: バラ・赤“サムライ０８” → 品目=バラ・赤  品種=サムライ０８
+//     ダリア“艶舞”         → 品目=ダリア    品種=艶舞
+//     バラ・赤             → 品目=バラ・赤  品種=""
+//     カーネーション       → 品目=カーネーション 品種=""
+//     キク（デコラ・タイプ）→ 品目=キク（デコラ・タイプ） 品種=""
 function splitFajName(name) {
-  // 括弧の外にある最初の「・」で分割(キク（デコラ・○○）の誤分割を防ぐ)
-  let depth = 0;
-  for (let i = 0; i < name.length; i++) {
-    const c = name[i];
-    if (c === '（' || c === '(') depth++;
-    else if (c === '）' || c === ')') depth = Math.max(0, depth - 1);
-    else if (c === '・' && depth === 0 && i > 0) {
-      return { hinmoku: name.slice(0, i).trim(), hinshu: name.slice(i + 1).trim() };
-    }
-  }
-  const sp = name.search(/[\s\u3000]/);
-  if (sp > 0) {
-    return { hinmoku: name.slice(0, sp).trim(), hinshu: name.slice(sp + 1).trim() };
-  }
-  const q = name.search(/[“"]/);
+  // “...” の引用符を品種名の目印として使う
+  // 引用符の前が品目（色を含む）、引用符の中身が品種
+  const q = name.search(/[“”"]/);
   if (q > 0) {
-    return { hinmoku: name.slice(0, q).trim(), hinshu: name.slice(q).replace(/^[“"]|[”"]$/g, '').trim() };
+    return {
+      hinmoku: name.slice(0, q).trim(),
+      hinshu:  name.slice(q + 1).replace(/[“””]\s*$/, '').trim()
+    };
   }
-  return { hinmoku: name, hinshu: '' };
+  return { hinmoku: name.trim(), hinshu: '' };
 }
 
 const LOSS_SHEET_NAME = 'ロス管理';
